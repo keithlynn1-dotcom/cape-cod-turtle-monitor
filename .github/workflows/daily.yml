@@ -1,9 +1,8 @@
 name: Daily Cape Cod Turtle Monitor
 on:
  schedule:
-   # Runs automatically every day at 06:00 UTC (1:00 AM EDT / 2:00 AM EST)
    - cron: '0 6 * * *'
- workflow_dispatch: # Allows you to run it manually anytime with a button click
+ workflow_dispatch:
 jobs:
  run-agent:
    runs-on: ubuntu-latest
@@ -17,7 +16,7 @@ jobs:
      - name: Install dependencies
        run: |
          python -m pip install --upgrade pip
-         pip install -r requirements.txt
+         pip install requests pandas numpy scikit-learn twilio
      - name: Run Monitoring Agent
        env:
          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
