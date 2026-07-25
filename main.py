@@ -1,10 +1,19 @@
 import os
+import sys
+import subprocess
+# 1. Ensure all packages exist at runtime
+def install_if_missing(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+for pkg in ["requests", "pandas", "numpy", "scikit-learn", "twilio"]:
+    install_if_missing(pkg if pkg != "scikit-learn" else "sklearn")
 import requests
 import numpy as np
 import pandas as pd
-from twilio.rest import Client
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-# Pull secrets automatically from GitHub environment variables
+# Read secrets from GitHub Actions environment
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN  = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_PHONE  = os.environ.get("TWILIO_FROM_PHONE", "")
@@ -35,7 +44,7 @@ class CapeCodTurtleAgent:
     def fetch_live_noaa_buoy(self):
         url = "https://www.ndbc.noaa.gov/data/realtime2/44090.txt"
         try:
-            res = requests.get(url, timeout=5)
+            res = requests.get(url, timeout=10)
             if res.status_code == 200:
                 lines = res.text.split("\n")
                 header = lines[0].split()
@@ -45,9 +54,9 @@ class CapeCodTurtleAgent:
                 df["sst"] = pd.to_numeric(df["sst"], errors="coerce")
                 valid = df.dropna(subset=["sst"]).head(24)
                 if not valid.empty:
-                    return valid["sst"].iloc[0], True
-        except Exception:
-            pass
+                    return float(valid["sst"].iloc[0]), True
+        except Exception as e:
+            print(f"NOAA Fetch note: {e}")
         return 14.2, False
     def generate_2027_forecast(self, current_sst):
         oct_rate = -0.28
@@ -72,15 +81,22 @@ class CapeCodTurtleAgent:
             f"• Threat Level: {'CRITICAL (Water <= 10.5°C)' if results['alert_triggered'] else 'NORMAL (Monitoring Active)'}"
         )
         print("\n" + "="*60 + "\n" + msg + "\n" + "="*60 + "\n")
+        # Only attempt SMS if credentials exist
         if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and ALERT_TO_PHONE:
             try:
+                from twilio.rest import Client
                 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
                 client.messages.create(body=msg, from_=TWILIO_FROM_PHONE, to=ALERT_TO_PHONE)
                 print(f"📱 SMS Alert successfully sent to {ALERT_TO_PHONE}!")
             except Exception as e:
-                print(f"⚠️ Could not send SMS: {e}")
+                print(f"⚠️ Twilio SMS step skipped/failed: {e}")
+        else:
+            print("💡 Twilio keys not present or incomplete. Skipping SMS dispatch.")
 if __name__ == "__main__":
+    print("🚀 Agent starting execution...")
     agent = CapeCodTurtleAgent()
     current_sst, is_live = agent.fetch_live_noaa_buoy()
+    print(f"📡 NOAA Buoy status: {'LIVE' if is_live else 'OFFLINE/SIMULATED'} (Temp: {current_sst}°C)")
     results = agent.generate_2027_forecast(current_sst)
     agent.send_alert(results)
+    print("✅ Agent run finished successfully!")
