@@ -18,6 +18,11 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN  = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_PHONE  = os.environ.get("TWILIO_FROM_PHONE", "")
 ALERT_TO_PHONE     = os.environ.get("ALERT_TO_PHONE", "")
+# Print debug info to logs
+print(f"DEBUG - SID present: {bool(TWILIO_ACCOUNT_SID)}")
+print(f"DEBUG - TOKEN present: {bool(TWILIO_AUTH_TOKEN)}")
+print(f"DEBUG - FROM_PHONE present: {bool(TWILIO_FROM_PHONE)}")
+print(f"DEBUG - TO_PHONE present: {bool(ALERT_TO_PHONE)}")
 class CapeCodTurtleAgent:
     STUNNING_TEMP_C = 10.5
     def __init__(self):
